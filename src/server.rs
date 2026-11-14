@@ -1700,7 +1700,11 @@ impl proto::Peer for Peer {
 
         // A request translated from HTTP/1 must not include the :authority
         // header
-        if let Some(authority) = pseudo.authority {
+        //
+        // An empty :authority is treated as absent. grpc-go sends one when it
+        // dials through a custom name resolver, and Go's HTTP/2 server accepts
+        // it; resetting the stream breaks those clients.
+        if let Some(authority) = pseudo.authority.filter(|a| !a.is_empty()) {
             let maybe_authority = uri::Authority::from_maybe_shared(authority.clone().into_inner());
             parts.authority = Some(maybe_authority.or_else(|why| {
                 malformed!(
